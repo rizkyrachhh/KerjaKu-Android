@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'KerjaKu_Proyek_Android_Studio.zip'
+      - 'KerjaKu_Android_Project_v1.1_ikon-baru.zip'
       - '.github/workflows/build-apk.yml'
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
           gradle-version: '8.9'
 
       - name: Extract Android project
-        run: unzip -o KerjaKu_Proyek_Android_Studio.zip -d source
+        run: unzip -o KerjaKu_Android_Project_v1.1_ikon-baru.zip -d source
 
       - name: Build debug APK
         working-directory: source/KerjaKuAndroid
