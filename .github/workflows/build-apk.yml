@@ -1,3 +1,4 @@
+
 name: Build KerjaKu APK
 
 on:
@@ -13,6 +14,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,23 +29,58 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-          
-      - name: Fix application name
+
+      - name: Extract and build KerjaKu
+        shell: bash
         run: |
-         sed -i 's/android:label="KerjaKu 1.2"/android:label="KerjaKu"/' source/KerjaKuAndroid/app/src/main/AndroidManifest.xml
+          set -e
 
-      - name: Build debug APK
-        working-directory: source/KerjaKuAndroid
-        run: gradle --no-daemon assembleDebug
+          echo "Extracting project..."
+          unzip -o KerjaKu_v1.2.zip -d source
 
-      - name: Rename APK
-        run: |
-         mv source/KerjaKuAndroid/app/build/outputs/apk/debug/app-debug.apk source/KerjaKuAndroid/app/build/outputs/apk/debug/KerjaKu.apk
+          echo "Finding Android project..."
+          SETTINGS_FILE=$(find source -name settings.gradle -print -quit)
 
-      - name: Upload APK
+          if [ -z "$SETTINGS_FILE" ]; then
+            echo "ERROR: settings.gradle not found!"
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+          echo "Project found: $PROJECT_DIR"
+
+          echo "Finding AndroidManifest.xml..."
+          MANIFEST=$(find "$PROJECT_DIR" -path '*/src/main/AndroidManifest.xml' -print -quit)
+
+          if [ -z "$MANIFEST" ]; then
+            echo "ERROR: AndroidManifest.xml not found!"
+            exit 1
+          fi
+
+          echo "Setting application name to KerjaKu..."
+          sed -i 's/android:label="[^"]*"/android:label="KerjaKu"/' "$MANIFEST"
+
+          echo "Building APK..."
+          cd "$PROJECT_DIR"
+          gradle --no-daemon assembleDebug
+
+          echo "Finding generated APK..."
+          APK=$(find app/build/outputs/apk/debug -name '*.apk' -print -quit)
+
+          if [ -z "$APK" ]; then
+            echo "ERROR: APK was not generated!"
+            exit 1
+          fi
+
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          cp "$APK" "$GITHUB_WORKSPACE/output/KerjaKu.apk"
+
+          echo "KerjaKu.apk successfully created!"
+
+      - name: Upload KerjaKu APK
         uses: actions/upload-artifact@v4
         with:
           name: KerjaKu-APK
-          path: source/KerjaKuAndroid/app/build/outputs/apk/debug/KerjaKu.apk
+          path: output/KerjaKu.apk
           if-no-files-found: error
           retention-days: 14
